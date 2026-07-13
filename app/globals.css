@@ -1,0 +1,59 @@
+@import "tailwindcss";
+
+@theme {
+  /* Brand */
+  --color-lime: #d8f26a;
+  --color-lime-dark: #c2e64f;
+  --color-ink: #111213;
+
+  /* Neutrals */
+  --color-surface: #ffffff;
+  --color-bg: #f6f7f5;
+  --color-border: #e8e9e6;
+  --color-divider: #eff0ed;
+  --color-muted: #6b7280;
+  --color-faint: #9ca3af;
+
+  /* Status */
+  --color-live: #22c55e;
+  --color-live-bg: #e7f9ee;
+
+  /* Chips */
+  --color-chip-blue-bg: #eaf1ff;
+  --color-chip-blue-text: #3b6fe0;
+  --color-chip-purple-bg: #f1ecfe;
+  --color-chip-purple-text: #7c5ce0;
+  --color-chip-red-bg: #fdecec;
+  --color-chip-red-text: #e0503b;
+
+  /* Radius / shadow */
+  --radius-card: 16px;
+  --shadow-card: 0 1px 6px rgba(0, 0, 0, 0.04);
+
+  /* Fonts */
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', Roboto, Helvetica, Arial,
+    sans-serif;
+
+  /* Marquee animation used by TopBanner */
+  --animate-marquee: marquee 22s linear infinite;
+}
+
+@keyframes marquee {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+}

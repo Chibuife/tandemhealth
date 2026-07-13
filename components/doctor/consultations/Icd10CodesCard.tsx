@@ -1,7 +1,7 @@
 'use client';
 
 import { ArrowRight } from 'lucide-react';
-import { Card } from '../Card';
+import { Card } from '../../Card';
 import { Icd10Suggestion } from '@/types';
 
 interface Props {

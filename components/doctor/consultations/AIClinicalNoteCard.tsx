@@ -1,8 +1,8 @@
 'use client';
 
 import { ChevronDown, RefreshCw } from 'lucide-react';
-import { Card } from '../Card';
-import { Badge } from '../Badge';
+import { Card } from '../../Card';
+import { Badge } from '../../Badge';
 import { SoapNote } from '@/types';
 
 interface Props {

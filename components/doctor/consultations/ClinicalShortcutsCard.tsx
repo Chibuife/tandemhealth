@@ -1,7 +1,7 @@
 'use client';
 
 import { ArrowRight, ClipboardList, FilePlus, LucideIcon, PlusCircle, Send } from 'lucide-react';
-import { Card } from '../Card';
+import { Card } from '../../Card';
 import { ClinicalShortcut, ShortcutTint } from '@/types';
 
 interface Props {

@@ -1,8 +1,8 @@
 'use client';
 
 import { Wifi } from 'lucide-react';
-import { Card } from '../Card';
-import { Badge } from '../Badge';
+import { Card } from '../../Card';
+import { Badge } from '../../Badge';
 import { AudioStatusMetrics } from '@/types';
 
 interface Props {

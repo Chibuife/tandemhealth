@@ -2,7 +2,7 @@ import { TopBanner } from '@/components/TopBanner';
 import { AppHeader } from '@/components/AppHeader';
 import { PatientSidebar } from '@/components/patient/PatientSidebar';
 import { PatientConsultationHeader } from '@/components/patient/PatientConsultationHeader';
-import { VideoCallPanel } from '@/components/patient/VideoCallPanel';
+import { VideoCallPanel } from '@/components/VideoCallPanel';
 import { TranscriptCard } from '@/components/patient/TranscriptCard';
 import { AudioQualityCard } from '@/components/patient/AudioQualityCard';
 import { ChatPanel } from '@/components/patient/ChatPanel';

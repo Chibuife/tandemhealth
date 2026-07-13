@@ -1,7 +1,7 @@
 'use client';
 
 import { ArrowLeft } from 'lucide-react';
-import { Badge } from '../Badge';
+import { Badge } from '../../Badge';
 import { Consultation } from '@/types';
 
 interface Props {

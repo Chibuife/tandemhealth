@@ -1,7 +1,7 @@
 'use client';
 
 import { ArrowRight, Check } from 'lucide-react';
-import { Card } from '../Card';
+import { Card } from '../../Card';
 import { TimelineEvent } from '@/types';
 
 interface Props {

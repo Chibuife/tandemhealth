@@ -2,8 +2,8 @@
 
 import { useState } from 'react';
 import { ArrowUp, Clock } from 'lucide-react';
-import { Card } from '../Card';
-import { Badge } from '../Badge';
+import { Card } from '../../Card';
+import { Badge } from '../../Badge';
 import { AssistantMessage } from '@/types';
 
 interface Props {

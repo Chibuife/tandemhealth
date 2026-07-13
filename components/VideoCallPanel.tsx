@@ -1,7 +1,7 @@
 'use client';
 
-import { VideoTile } from './VideoTile';
-import { CallControlsBar } from './CallControlsBar';
+import { VideoTile } from './patient/VideoTile';
+import { CallControlsBar } from './patient/CallControlsBar';
 import { CallParticipant } from '@/types/patient';
 
 interface Props {

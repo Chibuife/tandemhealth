@@ -21,6 +21,21 @@ import {
   transcript,
 } from '@/data/demoData';
 
+import { VideoCallPanel } from '@/components/patient/VideoCallPanel';
+import { TranscriptCard } from '@/components/patient/TranscriptCard';
+import { AudioQualityCard } from '@/components/patient/AudioQualityCard';
+import { ChatPanel } from '@/components/patient/ChatPanel';
+import { ConsultationSummaryCard } from '@/components/patient/ConsultationSummaryCard';
+
+
+import {
+  audioQuality,
+  callParticipants,
+  chatMessages,
+  consultationDocuments,
+  consultationInfo,
+  consultationSummary,
+} from '@/data/patientDemoData';
 export default function ConsultationPage() {
   return (
     <div className="flex h-screen flex-col bg-bg">
@@ -32,7 +47,19 @@ export default function ConsultationPage() {
 
         <main className="flex-1 overflow-y-auto p-5">
           <ConsultationHeader consultation={consultation} />
+          <div className="lg:col-span-2">
+            <VideoCallPanel participants={callParticipants} />
 
+            {/* <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-2">
+              <TranscriptCard entries={transcript} />
+              <AudioQualityCard metrics={audioQuality} />
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <ChatPanel clinicianName={consultationInfo.clinicianName} messages={chatMessages} />
+              <ConsultationSummaryCard summary={consultationSummary} />
+            </div> */}
+          </div>
           {/* Row 1: transcript + AI clinical note */}
           <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
             <LiveTranscriptCard entries={transcript} />

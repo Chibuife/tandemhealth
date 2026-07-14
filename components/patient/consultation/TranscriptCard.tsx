@@ -1,8 +1,8 @@
 'use client';
 
 import clsx from 'clsx';
-import { Card } from '../Card';
-import { Badge } from '../Badge';
+import { Card } from '../../Card';
+import { Badge } from '../../Badge';
 import { TranscriptEntry } from '@/types';
 
 interface Props {

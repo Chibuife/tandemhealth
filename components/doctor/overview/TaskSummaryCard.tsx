@@ -1,4 +1,4 @@
-import { Badge, BadgeColor } from './Badge';
+import { Badge, BadgeColor } from '../Badge';
 
 interface DonutSegment {
   label: string;

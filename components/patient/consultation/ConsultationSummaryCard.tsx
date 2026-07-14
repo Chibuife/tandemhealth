@@ -1,8 +1,8 @@
 'use client';
 
 import { ConsultationSummary } from '@/types/patient';
-import { Badge } from '../Badge';
-import Card from '../Card';
+import { Badge } from '../../Badge';
+import Card from '../../Card';
 
 interface Props {
   summary: ConsultationSummary;

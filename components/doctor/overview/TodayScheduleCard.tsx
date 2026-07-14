@@ -1,5 +1,5 @@
 import { ChevronRight } from 'lucide-react';
-import { Badge, BadgeColor } from './Badge';
+import { Badge, BadgeColor } from '../Badge';
 
 interface ScheduleItem {
   id: string;

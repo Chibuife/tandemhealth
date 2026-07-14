@@ -69,7 +69,7 @@ export interface Consultation {
 export interface NavItem {
   id: string;
   label: string;
-  icon: 'LayoutGrid' | 'Users' | 'FileText' | 'ShieldCheck' | 'Link2' | 'BarChart2' | 'Settings';
+  icon: 'LayoutGrid' | 'Users' | 'FileText' | 'ShieldCheck' | 'Link2' | 'BarChart2' | 'Settings'|'Stethoscope'|'Mail';
   isNew?: boolean;
   active?: boolean;
 }

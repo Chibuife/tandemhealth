@@ -13,6 +13,8 @@ import {
   Users,
   X,
   LucideIcon,
+  Stethoscope,
+  Mail,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { consultation, navItems } from '@/data/demoData';
@@ -27,6 +29,8 @@ const ICON_MAP: Record<NavItem['icon'], LucideIcon> = {
   Link2: Link2,
   BarChart2: BarChart2,
   Settings: Settings,
+  Stethoscope:Stethoscope,
+  Mail: Mail,
 };
 
 // Assumes item.id is a route slug, e.g. "dashboard", "patients", "records"...

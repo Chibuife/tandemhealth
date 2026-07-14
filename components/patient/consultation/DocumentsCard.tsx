@@ -1,8 +1,8 @@
 'use client';
 
 import { FileText, LucideIcon, Stethoscope } from 'lucide-react';
-import { Badge } from '../Badge';
-import Card from '../Card';
+import { Badge } from '../../Badge';
+import Card from '../../Card';
 import { ConsultationDocument, DocumentType } from '@/types/patient';
 
 interface Props {

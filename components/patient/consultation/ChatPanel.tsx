@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Send } from 'lucide-react';
 import clsx from 'clsx';
-import { Card } from '../Card';
+import { Card } from '../../Card';
 import { ChatMessage } from '@/types/patient';
 
 interface Props {

@@ -2,8 +2,8 @@
 
 import { AudioQualityMetrics, QualityLevel } from '@/types/patient';
 import clsx from 'clsx';
-import { Badge } from '../Badge';
-import Card from '../Card';
+import { Badge } from '../../Badge';
+import Card from '../../Card';
 
 
 interface Props {

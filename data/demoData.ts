@@ -20,12 +20,14 @@ export const consultation: Consultation = {
 };
 
 export const navItems: NavItem[] = [
-  { id: 'consultations', label: 'Consultations', icon: 'LayoutGrid', active: true },
+  { id: 'dashboard', label: 'Overview', icon: 'LayoutGrid', active: true },
+  { id: 'consultations', label: 'Consultations', icon: 'Stethoscope', active: true },
   { id: 'patients', label: 'Patients', icon: 'Users' },
   { id: 'templates', label: 'Templates', icon: 'FileText' },
   { id: 'cds', label: 'Clinical decision support', icon: 'ShieldCheck', isNew: true },
   { id: 'integrations', label: 'Integrations', icon: 'Link2' },
   { id: 'analytics', label: 'Analytics', icon: 'BarChart2' },
+  {id:'messages', label:'Messages', icon:'Mail'},
   { id: 'settings', label: 'Settings', icon: 'Settings' },
 ];
 

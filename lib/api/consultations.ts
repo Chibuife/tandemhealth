@@ -1,5 +1,5 @@
-import type { ConsultationRecord } from "@/types/consultation-list";
 import { getAccessToken } from "@/lib/auth/session";
+import { ConsultationRecord } from "@/types/consultations";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000";
 
@@ -60,17 +60,17 @@ const toAvatarTint = (id: string) => {
 };
 
 const toDisplayStatus = (status: BackendMeeting["status"]): ConsultationRecord["status"] => {
-  if (status === "live" || status === "ended") return "Completed";
-  if (status === "cancelled") return "Declined";
-  if (status === "accepted") return "Accepted";
-  if (status === "declined") return "Declined";
-  return "Pending";
+  if (status === "live" || status === "ended") return "completed";
+  if (status === "cancelled") return "declined";
+  if (status === "accepted") return "accepted";
+  if (status === "declined") return "declined";
+  return "pending";
 };
 
 const toDisplayPriority = (priority: BackendMeeting["priority"]): ConsultationRecord["priority"] => {
-  if (priority === "high") return "High";
-  if (priority === "low") return "Low";
-  return "Medium";
+  if (priority === "high") return "high";
+  if (priority === "low") return "low";
+  return "medium";
 };
 
 const toDisplayType = (consultationType: string) => {
@@ -103,32 +103,39 @@ const computeIsIncoming = (status: BackendMeeting["status"], scheduledStart: str
   return minutesUntilStart <= INCOMING_WINDOW_MINUTES && Date.now() < new Date(scheduledEnd).getTime();
 };
 
+const toPatientInitials = (name: string): string =>
+  name
+    .split(' ')
+    .filter(Boolean)
+    .map((part) => part[0])
+    .slice(0, 2)
+    .join('')
+    .toUpperCase();
+
 const mapToConsultationRecord = (m: BackendMeeting): ConsultationRecord => {
-  const start = new Date(m.scheduledStart);
-  const end = new Date(m.scheduledEnd);
+  const patientName = m.patientName ?? 'Unknown patient';
 
   return {
     id: m.id,
     slug: m.slug,
-    patientId: m.participantId ?? "",
-    patientName: m.patientName ?? "Unknown patient",
-    avatarInitials: toInitials(m.patientName),
-    avatarTint: toAvatarTint(m.id),
-    dateLabel: toDateLabel(m.scheduledStart),
-    time: toTimeLabel(m.scheduledStart),
-    durationMinutes: Math.round((end.getTime() - start.getTime()) / 60_000),
-    type: toDisplayType(m.consultationType),
-    reason: m.reasonForVisit ?? "",
+    patientId: m.participantId ?? '',
+    patientName,
+    patientInitials: toPatientInitials(patientName),
+    scheduledStart: m.scheduledStart,
+    scheduledEnd: m.scheduledEnd,
+    durationMinutes: Math.round(
+      (new Date(m.scheduledEnd).getTime() - new Date(m.scheduledStart).getTime()) / 60_000
+    ),
+    consultationType: toDisplayType(m.consultationType),
+    reasonForVisit: m.reasonForVisit ?? '',
     priority: toDisplayPriority(m.priority),
     status: toDisplayStatus(m.status),
     isIncoming: computeIsIncoming(m.status, m.scheduledStart, m.scheduledEnd),
-    scheduledStartISO: m.scheduledStart,
-    scheduledEndISO: m.scheduledEnd,
-    // age/gender aren't in the users table yet - add columns there if you
-    // want these populated for real instead of showing as undefined.
+    // patientInitials is derived here from patientName since there's no
+    // dedicated initials column; age/gender still aren't in the users
+    // table, so those fields remain absent from ConsultationRecord.
   };
 };
-
 export const fetchConsultations = async (): Promise<ConsultationRecord[]> => {
   const data = await authFetch("/meetings");
   return (data.meetings as BackendMeeting[]).map(mapToConsultationRecord);

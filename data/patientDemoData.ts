@@ -40,7 +40,7 @@ export const consultationInfo: PatientConsultationInfo = {
 };
 
 // export const callParticipants: CallParticipant[] = [
-//   { id: 'doctor', displayName: 'Dr. Emma Larsen', micActive: true, avatarColor: '#DCEBFF' },
+//   { id: 'doctor', displayName: 'Dr. Emma Larsen', role: 'doctor', micActive: true, avatarColor: '#DCEBFF' },
 //   { id: 'patient', displayName: 'You', role: 'patient', micActive: true, avatarColor: '#F1ECFE' },
 // ];
 

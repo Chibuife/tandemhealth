@@ -178,7 +178,7 @@ export async function requestConsultation(input: RequestConsultationInput) {
     method: "POST",
     body: JSON.stringify({
       title: "Doctor Consultation",
-      hostId: input.doctorId,
+      participantId: input.doctorId,
       scheduledStart: input.scheduledStart,
       scheduledEnd: input.scheduledEnd,
       reasonForVisit: input.reasonForVisit,

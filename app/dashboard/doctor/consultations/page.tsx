@@ -1,53 +1,66 @@
-import { ConsultationHeader } from '@/components/doctor/consultations/ConsultationHeader';
-import { LiveTranscriptCard } from '@/components/doctor/consultations/LiveTranscriptCard';
-import { AudioStatusCard } from '@/components/doctor/consultations/AudioStatusCard';
-import { AIClinicalNoteCard } from '@/components/doctor/consultations/AIClinicalNoteCard';
-import { ConsultationTimelineCard } from '@/components/doctor/consultations/ConsultationTimelineCard';
-import { Icd10CodesCard } from '@/components/doctor/consultations/Icd10CodesCard';
-import { ClinicalShortcutsCard } from '@/components/doctor/consultations/ClinicalShortcutsCard';
-import { AIClinicalAssistantCard } from '@/components/doctor/consultations/AIClinicalAssistantCard';
-import { VideoCallPanel } from '@/components/VideoCallPanel';
+'use client';
 
-import {
-  assistantMessages,
-  audioStatus,
-  clinicalShortcuts,
-  consultation,
-  icd10Suggestions,
-  soapNote,
-  timelineEvents,
-  transcript,
-} from '@/data/demoData';
-import { callParticipants } from '@/data/patientDemoData';
+import { ConsultationsPageHeader } from '@/components/doctor/consultations/ConsultationsPageHeader';
+import { ConsultationsWorkspace } from '@/components/doctor/consultations/ConsultationsWorkspace';
+import { ConsultationSummaryCard } from '@/components/doctor/consultations/ConsultationSummaryCard';
+import { TodaysScheduleCard } from '@/components/doctor/consultations/TodaysScheduleCard';
+import { QuickActionsCard } from '@/components/doctor/consultations/QuickActionsCard';
+import { SupportCard } from '@/components/doctor/consultations/SupportCard';
+import { quickActions } from '@/data/consultationsListData'; // static, unrelated to the backend
+import { useConsultationsData } from '@/hooks/useConsultationsData';
 
-export default function ConsultationPage() {
+export default function ConsultationsPage() {
+  const {
+    consultations,
+    todaysUpcoming,
+    todaysSchedule,
+    summary,
+    loading,
+    error,
+    accept,
+    decline,
+  } = useConsultationsData();
+
+  if (loading) {
+    return (
+      <>
+        <ConsultationsPageHeader />
+        <div className="py-12 text-center text-sm text-gray-500">Loading consultations…</div>
+      </>
+    );
+  }
+
+  if (error) {
+    return (
+      <>
+        <ConsultationsPageHeader />
+        <div className="py-12 text-center text-sm text-red-600">{error}</div>
+      </>
+    );
+  }
+
   return (
     <>
-      <ConsultationHeader consultation={consultation} />
+      <ConsultationsPageHeader />
 
-      {/* Row 1: video + transcript (left, 2 cols) + AI clinical note (right, 1 col) */}
-      <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="flex flex-col gap-4 lg:col-span-2">
-          <VideoCallPanel participants={callParticipants} />
-          <LiveTranscriptCard entries={transcript} />
+      {/* Main content (left, 2 cols) + summary sidebar (right, 1 col) */}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <ConsultationsWorkspace
+            consultations={consultations}
+            todaysUpcoming={todaysUpcoming}
+            onAccept={accept}
+            onDecline={decline}
+          />
         </div>
-        <AIClinicalNoteCard note={soapNote} />
-      </div>
 
-      {/* Row 2: audio status */}
-      <div className="mb-4">
-        <AudioStatusCard metrics={audioStatus} />
+        <div className="flex flex-col gap-4">
+          <ConsultationSummaryCard summary={summary} />
+          <TodaysScheduleCard schedule={todaysSchedule} />
+          <QuickActionsCard actions={quickActions} />
+          <SupportCard />
+        </div>
       </div>
-
-      {/* Row 3: timeline, ICD-10 codes, shortcuts */}
-      <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-3">
-        <ConsultationTimelineCard events={timelineEvents} />
-        <Icd10CodesCard suggestions={icd10Suggestions} />
-        <ClinicalShortcutsCard shortcuts={clinicalShortcuts} />
-      </div>
-
-      {/* Row 4: AI clinical assistant */}
-      <AIClinicalAssistantCard messages={assistantMessages} />
     </>
   );
 }

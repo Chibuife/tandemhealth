@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import { Mic, MicOff } from 'lucide-react';
 import { CallParticipant } from '@/types/patient';
 
@@ -7,12 +8,24 @@ interface Props {
   participant: CallParticipant;
 }
 
-/**
- * Placeholder video tile. In production this would host a real <video>
- * element bound to a WebRTC track; here we render a colored panel with
- * initials so the layout can be reviewed without a live stream.
- */
 export function VideoTile({ participant }: Props) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  // Attach/detach the live track when it's present. participant.videoTrack
+  // is a minimal AttachableTrack (any object with attach/detach - this
+  // matches LiveKit's Track class without importing livekit-client here).
+  useEffect(() => {
+    const track = participant.videoTrack;
+    const el = videoRef.current;
+
+    if (track && el) {
+      track.attach(el);
+      return () => {
+        track.detach(el);
+      };
+    }
+  }, [participant.videoTrack]);
+
   const initials = participant.displayName
     .split(' ')
     .map((part) => part[0])
@@ -25,7 +38,17 @@ export function VideoTile({ participant }: Props) {
       className="relative flex aspect-video flex-1 items-center justify-center overflow-hidden rounded-2xl"
       style={{ backgroundColor: participant.avatarColor }}
     >
-      <span className="text-4xl font-bold text-ink/40">{initials}</span>
+      {participant.videoTrack ? (
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted={participant.isLocal}
+          className="h-full w-full object-cover"
+        />
+      ) : (
+        <span className="text-4xl font-bold text-ink/40">{initials}</span>
+      )}
 
       <span className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-live">
         {participant.micActive ? (

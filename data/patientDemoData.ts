@@ -37,13 +37,12 @@ export const consultationInfo: PatientConsultationInfo = {
   clinicianName: 'Dr. Emma Larsen',
   isLive: true,
   elapsedTime: '00:12:48',
-  isRecording: true,
 };
 
-export const callParticipants: CallParticipant[] = [
-  { id: 'doctor', displayName: 'Dr. Emma Larsen', role: 'doctor', micActive: true, avatarColor: '#DCEBFF' },
-  { id: 'patient', displayName: 'You', role: 'patient', micActive: true, avatarColor: '#F1ECFE' },
-];
+// export const callParticipants: CallParticipant[] = [
+//   { id: 'doctor', displayName: 'Dr. Emma Larsen', micActive: true, avatarColor: '#DCEBFF' },
+//   { id: 'patient', displayName: 'You', role: 'patient', micActive: true, avatarColor: '#F1ECFE' },
+// ];
 
 export const transcript: TranscriptEntry[] = [
   { id: 't1', timestamp: '00:12', speaker: 'Dr. Larsen', speakerType: 'doctor', text: 'How have you been feeling lately?' },

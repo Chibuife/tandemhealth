@@ -1,17 +1,48 @@
 'use client';
 
 import { ArrowLeft } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { Badge } from '../../Badge';
 import { PatientConsultationInfo } from '@/types/patient';
 
 interface Props {
   info: PatientConsultationInfo;
+  onJoin: () => void;
+  onLeave: () => void;
+  isConnecting: boolean;
+  hasJoined: boolean;
+  meetingEnded: boolean;
 }
 
-export function PatientConsultationHeader({ info }: Props) {
+export function PatientConsultationHeader({
+  info,
+  onJoin,
+  onLeave,
+  isConnecting,
+  hasJoined,
+  meetingEnded,
+}: Props) {
+  const router = useRouter();
+
+  const isDisabled = isConnecting || meetingEnded;
+
+  const label = isConnecting
+    ? 'Connecting...'
+    : hasJoined
+    ? 'Leave consultation'
+    : 'Join consultation';
+
+  const handleClick = () => {
+    if (isDisabled) return;
+    hasJoined ? onLeave() : onJoin();
+  };
+
   return (
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-      <button className="mr-5 flex items-center text-muted hover:text-ink">
+      <button
+        onClick={() => router.back()}
+        className="mr-5 flex items-center text-muted hover:text-ink"
+      >
         <ArrowLeft size={16} />
         <span className="ml-1.5 text-[13px] font-medium">Back to consultations</span>
       </button>
@@ -29,8 +60,18 @@ export function PatientConsultationHeader({ info }: Props) {
           <span className="mr-1.5 h-1.5 w-1.5 rounded-full bg-red-500" />
           <span className="text-xs font-semibold text-ink">Recording</span>
         </button>
-        <button className="rounded-full bg-ink px-4 py-2 text-xs font-bold text-surface transition hover:bg-black">
-          End consultation
+
+        <button
+          onClick={handleClick}
+          disabled={isDisabled}
+          aria-busy={isConnecting}
+          className={`rounded-full px-4 py-2 text-xs font-bold transition ${
+            isDisabled
+              ? 'cursor-not-allowed bg-ink/40 text-surface'
+              : 'bg-ink text-surface hover:bg-black'
+          }`}
+        >
+          {label}
         </button>
       </div>
     </div>

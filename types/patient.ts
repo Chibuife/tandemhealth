@@ -27,9 +27,11 @@ export type ParticipantRole = 'doctor' | 'patient';
 export interface CallParticipant {
   id: string;
   displayName: string;
-  role: ParticipantRole;
+  // role: ParticipantRole;
   micActive: boolean;
   avatarColor: string; // fallback tile background when there's no live video feed
+  videoTrack:Track| undefined;
+  isLocal:boolean;
 }
 
 export type QualityLevel = 'Good' | 'Fair' | 'Poor';
@@ -80,7 +82,7 @@ export interface PatientConsultationInfo {
   clinicianName: string;
   isLive: boolean;
   elapsedTime: string;
-  isRecording: boolean;
+  // isRecording: boolean;
 }
 
 
@@ -337,6 +339,7 @@ export interface RecentConversation {
 
 
 import { BadgeColor } from '@/components/doctor/Badge';
+import { Track } from 'livekit-client';
 
 export interface PatientTask {
   id: string;

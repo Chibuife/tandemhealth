@@ -15,7 +15,6 @@ import { DocumentsCard } from '@/components/patient/consultation/DocumentsCard';
 
 import {
   audioQuality,
-  callParticipants,
   chatMessages,
   consultationDocuments,
   consultationSummary,
@@ -282,7 +281,7 @@ export default function PatientConsultationPage() {
           {/* Row 1: video + transcript/audio (left, 2 cols) + AI note (right, 1 col) */}
           <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
             <div className="flex flex-col gap-4 lg:col-span-2">
-              <VideoCallPanel participants={hasJoined ? liveParticipants : callParticipants} />
+              <VideoCallPanel participants={liveParticipants } />
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <TranscriptCard entries={transcript} />
                 <AudioQualityCard metrics={audioQuality} />

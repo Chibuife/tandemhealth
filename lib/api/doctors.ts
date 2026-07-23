@@ -1,7 +1,7 @@
 import { getAccessToken } from "@/lib/auth/session";
 import type { Doctor } from "@/types/doctor";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 const authFetch = async (path: string, options: RequestInit = {}) => {
   const token = getAccessToken();

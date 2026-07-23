@@ -1,7 +1,7 @@
 import { getAccessToken } from "@/lib/auth/session";
 import { ConsultationRecord } from "@/types/consultations";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000";
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL;
 
 const authFetch = async (path: string, options: RequestInit = {}) => {
   const token = getAccessToken();
@@ -178,7 +178,7 @@ export async function requestConsultation(input: RequestConsultationInput) {
     method: "POST",
     body: JSON.stringify({
       title: "Doctor Consultation",
-      participantId: input.doctorId,
+      hostId: input.doctorId,
       scheduledStart: input.scheduledStart,
       scheduledEnd: input.scheduledEnd,
       reasonForVisit: input.reasonForVisit,

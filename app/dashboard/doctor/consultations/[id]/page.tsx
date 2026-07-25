@@ -539,14 +539,14 @@ export default function ConsultationPage() {
         id: number | string;
         timestamp: string;
         role: 'doctor' | 'patient' | string;
-        text: string;
+        transcript: string;
       };
       const history: TranscriptEntry[] = (data as APITranscriptItem[]).map((item) => ({
         id: `h-${item.id}`,
         timestamp: formatClockTime(new Date(item.timestamp).getTime()),
         speaker: item.role === 'doctor' ? 'Doctor' : item.role === 'patient' ? 'Patient' : 'Unknown',
         speakerType: item.role === 'doctor' ? 'doctor' : 'patient',
-        text: item.text,
+        text: item.transcript,
       }));
       setTranscriptEntries(history);
     } catch (err) {

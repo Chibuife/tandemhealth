@@ -574,42 +574,40 @@ export default function ConsultationPage() {
   //     cancelled = true;
   //   };
   // }, [slug, fetchTranscriptHistory]);
+useEffect(() => {
+  let cancelled = false;
+  callStartRef.current = null;
 
-  useEffect(() => {
-    let cancelled = false;
-    callStartRef.current = null;
+  const run = async () => {
+    try {
+      const record = await fetchConsultationById(id);
+      if (cancelled) return;
 
-    const load = async () => {
-      try {
-        const record = await fetchConsultationById(id);
-        if (cancelled) return;
-        setPatientName(record.patientName);
-        setSlug(record.slug);
-      } catch (err) {
-        if (!cancelled) {
-          setLoadError(err instanceof Error ? err.message : 'Failed to load consultation');
-        }
-      } finally {
-        if (!cancelled) setLoading(false);
+      setPatientName(record.patientName);
+      setSlug(record.slug);
+
+      // Use record.slug directly — setSlug() above won't be reflected in
+      // the `slug` state variable until the next render, so reading `slug`
+      // here would still see the stale '' from this render's closure.
+      await fetchTranscriptHistory(record.slug);
+    } catch (err) {
+      if (!cancelled) {
+        setLoadError(err instanceof Error ? err.message : 'Failed to load consultation');
       }
-    };
+    } finally {
+      if (!cancelled) setLoading(false);
+    }
+  };
 
-    // Run async work from inside the effect to avoid calling setState
-    // synchronously in the effect body (which can trigger cascading renders).
-    const run = async () => {
-      await load();
-      await fetchTranscriptHistory(slug);
-    };
+  run();
 
-    run();
-
-    return () => {
-      cancelled = true;
-      roomRef.current?.disconnect();
-      roomRef.current = null;
-      listenersAttachedRef.current = false;
-    };
-  }, [id, fetchTranscriptHistory]);
+  return () => {
+    cancelled = true;
+    roomRef.current?.disconnect();
+    roomRef.current = null;
+    listenersAttachedRef.current = false;
+  };
+}, [id, fetchTranscriptHistory]);
 
   const joinCall = async () => {
     setJoinError(null);

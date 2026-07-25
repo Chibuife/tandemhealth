@@ -503,12 +503,37 @@ export default function ConsultationPage() {
 
   // Loads any transcript already recorded before this page was opened
   // (e.g. rejoining a call in progress, or reviewing after the fact).
-  // This is a read-only GET — writes belong on the agent, not here.
-  const fetchTranscriptHistory = useCallback(async () => {
-    if (!id) return;
+  // // This is a read-only GET — writes belong on the agent, not here.
+  // const fetchTranscriptHistory = useCallback(async () => {
+  //   if (!id) return;
+  //   try {
+  //     const { data } = await axios.get(
+  //       `${process.env.NEXT_PUBLIC_API_URL}/transcripts/${id}`
+  //     );
+  //     type APITranscriptItem = {
+  //       id: number | string;
+  //       timestamp: string;
+  //       role: 'doctor' | 'patient' | string;
+  //       text: string;
+  //     };
+  //     const history: TranscriptEntry[] = (data as APITranscriptItem[]).map((item) => ({
+  //       id: `h-${item.id}`,
+  //       timestamp: formatClockTime(new Date(item.timestamp).getTime()),
+  //       speaker: item.role === 'doctor' ? 'Doctor' : item.role === 'patient' ? 'Patient' : 'Unknown',
+  //       speakerType: item.role === 'doctor' ? 'doctor' : 'patient',
+  //       text: item.text,
+  //     }));
+  //     setTranscriptEntries(history);
+  //   } catch (err) {
+  //     console.error('Failed to load transcript history', err);
+  //   }
+  // }, [id]);
+
+  const fetchTranscriptHistory = useCallback(async (roomName: string) => {
+    if (!roomName) return;
     try {
       const { data } = await axios.get(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/consultations/${id}/transcripts`
+        `${process.env.NEXT_PUBLIC_API_URL}/transcripts/${roomName}`
       );
       type APITranscriptItem = {
         id: number | string;
@@ -527,7 +552,28 @@ export default function ConsultationPage() {
     } catch (err) {
       console.error('Failed to load transcript history', err);
     }
-  }, [id]);
+  }, []);
+
+  // Fires once `slug` actually resolves from fetchConsultationById — not
+  // tied to `id`, since `id` is the route param, `slug` is the LiveKit room
+  // name the backend actually keys transcripts by.
+  // useEffect(() => {
+  //   if (!slug) return;
+
+  //   // Call async fetch inside effect to avoid calling setState synchronously
+  //   let cancelled = false;
+  //   (async () => {
+  //     try {
+  //       await fetchTranscriptHistory(slug);
+  //     } catch (err) {
+  //       if (!cancelled) console.error('Failed to fetch transcript history', err);
+  //     }
+  //   })();
+
+  //   return () => {
+  //     cancelled = true;
+  //   };
+  // }, [slug, fetchTranscriptHistory]);
 
   useEffect(() => {
     let cancelled = false;
@@ -552,7 +598,7 @@ export default function ConsultationPage() {
     // synchronously in the effect body (which can trigger cascading renders).
     const run = async () => {
       await load();
-      await fetchTranscriptHistory();
+      await fetchTranscriptHistory(slug);
     };
 
     run();

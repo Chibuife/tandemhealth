@@ -385,7 +385,6 @@
 //     </>
 //   );
 // }
-
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -407,7 +406,6 @@ import {
   audioStatus,
   clinicalShortcuts,
   icd10Suggestions,
-  soapNote,
   timelineEvents,
 } from '@/data/demoData';
 import {
@@ -419,7 +417,19 @@ import type { Consultation, TranscriptEntry, SoapNote } from '@/types';
 import type { CallParticipant } from '@/types/patient';
 import type { Participant, RemoteParticipant } from 'livekit-client';
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+
 const AVATAR_COLORS = ['#2563eb', '#059669', '#d97706', '#e11d48', '#7c3aed'];
+
+const EMPTY_SOAP: SoapNote = {
+  subjective: '',
+  objective: '',
+  assessment: '',
+  plan: [],
+  status: 'draft',
+};
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const colorForIdentity = (identity: string) => {
   const hash = identity.split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
@@ -458,7 +468,7 @@ const formatElapsed = (seconds: number) => {
 const formatClockTime = (ms: number) =>
   new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-// ─── Transcript message shape ─────────────────────────────────────────────────
+// ─── Transcript types ─────────────────────────────────────────────────────────
 
 type TranscriptRole = 'doctor' | 'patient' | 'unknown';
 
@@ -484,51 +494,31 @@ function isTranscriptMessage(value: unknown): value is TranscriptDataMessage {
   );
 }
 
-// ─── SOAP update message shape ────────────────────────────────────────────────
+// ─── SOAP types ───────────────────────────────────────────────────────────────
 
-// Gemini returns plan as a plain string. The AIClinicalNoteCard expects
-// plan as string[]. We normalise at the boundary so neither component
-// needs to change.
-interface RawSoapFromWorker {
+interface RawSoap {
   subjective: string;
   objective: string;
   assessment: string;
-  plan: string | string[]; // Gemini may return either
+  plan: string | string[];
+  status?: string;
 }
 
-interface SoapUpdateMessage {
-  type: 'soap_update';
-  soap: RawSoapFromWorker;
-  timestamp: number;
-}
-
-function isSoapUpdate(value: unknown): value is SoapUpdateMessage {
-  if (typeof value !== 'object' || value === null) return false;
-  const v = value as Record<string, unknown>;
-  return (
-    v.type === 'soap_update' &&
-    typeof v.soap === 'object' &&
-    v.soap !== null
-  );
-}
-
-// Convert whatever Gemini returned for `plan` into the string[] the card expects.
 function normalisePlan(plan: string | string[]): string[] {
-  if (Array.isArray(plan)) return plan;
-  // Split on newlines or semicolons so "Take paracetamol; rest" → two bullets.
+  if (Array.isArray(plan)) return plan.filter(Boolean);
   return plan
     .split(/\n|;/)
     .map((s) => s.replace(/^[-•*]\s*/, '').trim())
     .filter(Boolean);
 }
 
-function toSoapNote(raw: RawSoapFromWorker): SoapNote {
+function toSoapNote(raw: RawSoap): SoapNote {
   return {
     subjective: raw.subjective,
     objective:  raw.objective,
     assessment: raw.assessment,
     plan:       normalisePlan(raw.plan),
-    status:     'draft',
+    status:     raw.status === 'final' ? 'final' : 'draft',
   };
 }
 
@@ -538,39 +528,45 @@ export default function ConsultationPage() {
   const { id } = useParams<{ id: string }>();
   const router = useRouter();
 
-  const roomRef = useRef<Room | null>(null);
-  const callStartRef = useRef<number | null>(null);
-  const listenersAttachedRef = useRef(false);
-  const entryIdRef = useRef(0);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const roomRef               = useRef<Room | null>(null);
+  const callStartRef          = useRef<number | null>(null);
+  const listenersAttachedRef  = useRef(false);
+  const entryIdRef            = useRef(0);
+  const bottomRef             = useRef<HTMLDivElement>(null);
 
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [joinError, setJoinError] = useState<string | null>(null);
+  const [loading, setLoading]         = useState(true);
+  const [loadError, setLoadError]     = useState<string | null>(null);
+  const [joinError, setJoinError]     = useState<string | null>(null);
 
   const [patientName, setPatientName] = useState('');
-  const [slug, setSlug] = useState('');
-  const [isLive, setIsLive] = useState(false);
+  const [slug, setSlug]               = useState('');
+  const [isLive, setIsLive]           = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   const [isConnecting, setIsConnecting] = useState(false);
-  const [isEnding, setIsEnding] = useState(false);
-  const [hasJoined, setHasJoined] = useState(false);
+  const [isEnding, setIsEnding]         = useState(false);
+  const [hasJoined, setHasJoined]       = useState(false);
   const [meetingEnded, setMeetingEnded] = useState(false);
 
-  const [liveParticipants, setLiveParticipants] = useState<CallParticipant[]>([]);
+  const [liveParticipants, setLiveParticipants]   = useState<CallParticipant[]>([]);
   const [transcriptEntries, setTranscriptEntries] = useState<TranscriptEntry[]>([]);
 
-  // Live SOAP note — starts as demo data, gets replaced by the worker's
-  // AI-generated version the first time a soap_update arrives.
-  const [liveSoapNote, setLiveSoapNote] = useState<SoapNote>(soapNote);
+  // Starts empty — shows the empty state / Generate button in the card.
+  // Replaced by the saved note on load, or by a fresh generation on click.
+  const [liveSoapNote, setLiveSoapNote]   = useState<SoapNote>(EMPTY_SOAP);
+  const [isGenerating, setIsGenerating]   = useState(false);
+
+  // ─── Participants ───────────────────────────────────────────────────────────
 
   const refreshParticipants = useCallback(() => {
     const room = roomRef.current;
     if (!room) return;
-    const remote = Array.from(room.remoteParticipants.values()).map(toCallParticipant);
-    setLiveParticipants(remote);
+    setLiveParticipants(
+      Array.from(room.remoteParticipants.values()).map(toCallParticipant)
+    );
   }, []);
+
+  // ─── Data fetching ──────────────────────────────────────────────────────────
 
   const fetchTranscriptHistory = useCallback(async (roomName: string) => {
     if (!roomName) return;
@@ -597,19 +593,18 @@ export default function ConsultationPage() {
     }
   }, []);
 
-  // Also fetch the latest saved SOAP note on load so the card isn't empty
-  // if the doctor rejoins a consultation mid-session.
+  // Fetch the last saved SOAP note on load — no generation cost.
+  // If the room has no note yet the endpoint returns 404 and we silently
+  // leave the empty state so the doctor sees the Generate button.
   const fetchSoapHistory = useCallback(async (roomName: string) => {
     if (!roomName) return;
     try {
       const { data } = await axios.get(
         `${process.env.NEXT_PUBLIC_API_URL}/soap/${roomName}`
       );
-      if (data) {
-        setLiveSoapNote(toSoapNote(data as RawSoapFromWorker));
-      }
+      if (data) setLiveSoapNote(toSoapNote(data as RawSoap));
     } catch {
-      // No SOAP note yet — that's fine, keep the demo data as placeholder.
+      // 404 = no note yet — keep EMPTY_SOAP so the card shows Generate
     }
   }, []);
 
@@ -648,13 +643,31 @@ export default function ConsultationPage() {
     };
   }, [id, fetchTranscriptHistory, fetchSoapHistory]);
 
+  // ─── Generate SOAP on demand ────────────────────────────────────────────────
+
+  const handleGenerateSoap = useCallback(async () => {
+    if (!slug || isGenerating) return;
+    setIsGenerating(true);
+    try {
+      const { data } = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_URL}/soap/${slug}/generate`
+      );
+      setLiveSoapNote(toSoapNote(data as RawSoap));
+    } catch (err) {
+      console.error('Failed to generate SOAP note', err);
+    } finally {
+      setIsGenerating(false);
+    }
+  }, [slug, isGenerating]);
+
+  // ─── LiveKit room ───────────────────────────────────────────────────────────
+
   const joinCall = async () => {
     setJoinError(null);
     setIsConnecting(true);
 
     try {
-      const role = 'doctor';
-      const { token, livekitUrl } = await getConsultationJoinToken(slug, role);
+      const { token, livekitUrl } = await getConsultationJoinToken(slug, 'doctor');
 
       const room = roomRef.current ?? new Room();
       roomRef.current = room;
@@ -673,14 +686,14 @@ export default function ConsultationPage() {
           setLiveParticipants([]);
         });
 
-        room.on(RoomEvent.ParticipantConnected, refreshParticipants);
+        room.on(RoomEvent.ParticipantConnected,    refreshParticipants);
         room.on(RoomEvent.ParticipantDisconnected, refreshParticipants);
-        room.on(RoomEvent.TrackSubscribed, refreshParticipants);
-        room.on(RoomEvent.TrackUnsubscribed, refreshParticipants);
-        room.on(RoomEvent.TrackMuted, refreshParticipants);
-        room.on(RoomEvent.TrackUnmuted, refreshParticipants);
-        room.on(RoomEvent.LocalTrackPublished, refreshParticipants);
-        room.on(RoomEvent.LocalTrackUnpublished, refreshParticipants);
+        room.on(RoomEvent.TrackSubscribed,         refreshParticipants);
+        room.on(RoomEvent.TrackUnsubscribed,       refreshParticipants);
+        room.on(RoomEvent.TrackMuted,              refreshParticipants);
+        room.on(RoomEvent.TrackUnmuted,            refreshParticipants);
+        room.on(RoomEvent.LocalTrackPublished,     refreshParticipants);
+        room.on(RoomEvent.LocalTrackUnpublished,   refreshParticipants);
 
         room.on(RoomEvent.DataReceived, (payload: Uint8Array, _participant, _kind, topic) => {
           let parsed: unknown;
@@ -690,7 +703,7 @@ export default function ConsultationPage() {
             return;
           }
 
-          // ── Transcript finals ──────────────────────────────────────────
+          // Transcript finals
           if (topic === 'transcript' || topic === undefined) {
             if (!isTranscriptMessage(parsed) || !parsed.final) return;
             const message = parsed;
@@ -709,22 +722,14 @@ export default function ConsultationPage() {
                   id: `t-${entryIdRef.current++}`,
                   timestamp: formatClockTime(message.timestamp),
                   speaker:
-                    message.role === 'doctor'
-                      ? 'Doctor'
-                      : message.role === 'patient'
-                      ? 'Patient'
-                      : 'Unknown',
+                    message.role === 'doctor' ? 'Doctor'
+                    : message.role === 'patient' ? 'Patient'
+                    : 'Unknown',
                   speakerType: message.role === 'doctor' ? 'doctor' : 'patient',
                   text: message.text,
                 },
               ];
             });
-          }
-
-          // ── SOAP updates from the worker ───────────────────────────────
-          if (topic === 'soap') {
-            if (!isSoapUpdate(parsed)) return;
-            setLiveSoapNote(toSoapNote(parsed.soap));
           }
         });
 
@@ -745,6 +750,8 @@ export default function ConsultationPage() {
     }
   };
 
+  // ─── Timers ─────────────────────────────────────────────────────────────────
+
   useEffect(() => {
     if (!isLive || callStartRef.current === null) return;
     const tick = setInterval(() => {
@@ -756,6 +763,8 @@ export default function ConsultationPage() {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [transcriptEntries]);
+
+  // ─── End consultation ───────────────────────────────────────────────────────
 
   const handleEndConsultation = useCallback(async () => {
     if (!slug || isEnding || meetingEnded) return;
@@ -775,6 +784,8 @@ export default function ConsultationPage() {
       setIsEnding(false);
     }
   }, [slug, isEnding, meetingEnded]);
+
+  // ─── Render ─────────────────────────────────────────────────────────────────
 
   if (loading) {
     return (
@@ -832,8 +843,11 @@ export default function ConsultationPage() {
           <div ref={bottomRef} />
         </div>
 
-        {/* Live AI-generated SOAP note — updates every 15 s via the worker */}
-        <AIClinicalNoteCard note={liveSoapNote} />
+        <AIClinicalNoteCard
+          note={liveSoapNote}
+          onGenerate={handleGenerateSoap}
+          isGenerating={isGenerating}
+        />
       </div>
 
       <div className="mb-4">

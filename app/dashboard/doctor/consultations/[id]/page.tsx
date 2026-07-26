@@ -965,14 +965,14 @@ export default function ConsultationPage() {
           microphoneConnected={micConnected}
         />
       </div>
-
+{/* 
       <div className="mb-4 grid grid-cols-1 gap-4 md:grid-cols-3">
         <ConsultationTimelineCard events={timelineEvents} />
         <Icd10CodesCard suggestions={icd10Suggestions} />
         <ClinicalShortcutsCard shortcuts={clinicalShortcuts} />
       </div>
 
-      <AIClinicalAssistantCard messages={assistantMessages} />
+      <AIClinicalAssistantCard messages={assistantMessages} /> */}
     </>
   );
 }

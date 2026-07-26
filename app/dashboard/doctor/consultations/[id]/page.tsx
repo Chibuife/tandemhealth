@@ -3,6 +3,7 @@
 // import { useCallback, useEffect, useRef, useState } from 'react';
 // import { useParams, useRouter } from 'next/navigation';
 // import { Room, RoomEvent } from 'livekit-client';
+// import axios from 'axios';
 // import { ConsultationHeader } from '@/components/doctor/consultations/ConsultationHeader';
 // import { LiveTranscriptCard } from '@/components/doctor/consultations/LiveTranscriptCard';
 // import { AudioStatusCard } from '@/components/doctor/consultations/AudioStatusCard';
@@ -12,7 +13,6 @@
 // import { ClinicalShortcutsCard } from '@/components/doctor/consultations/ClinicalShortcutsCard';
 // import { AIClinicalAssistantCard } from '@/components/doctor/consultations/AIClinicalAssistantCard';
 // import { VideoCallPanel } from '@/components/VideoCallPanel';
-// import axios from "axios";
 
 // import {
 //   assistantMessages,
@@ -38,9 +38,6 @@
 //   return AVATAR_COLORS[hash % AVATAR_COLORS.length];
 // };
 
-// // Only ever called on remote participants now — the local doctor's own
-// // tile is no longer rendered through this list (handled separately by
-// // VideoCallPanel, or omitted entirely).
 // const toCallParticipant = (participant: Participant | RemoteParticipant): CallParticipant => {
 //   const videoPublication = Array.from(participant.videoTrackPublications.values())[0];
 
@@ -54,8 +51,6 @@
 //   };
 // };
 
-// // Shown before anyone has joined / while waiting for the patient, so the
-// // video grid isn't empty and we're not relying on fake demo people.
 // const PLACEHOLDER_PARTICIPANTS: CallParticipant[] = [
 //   {
 //     id: 'placeholder-patient',
@@ -76,10 +71,6 @@
 // const formatClockTime = (ms: number) =>
 //   new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-// // --- Transcript data-channel message shape + runtime validation ---
-// // The agent (a separate process) sends these over LiveKit's data channel.
-// // Nothing at compile time guarantees the two sides agree on shape, so this
-// // is validated at runtime rather than just cast.
 // type TranscriptRole = 'doctor' | 'patient' | 'unknown';
 
 // interface TranscriptDataMessage {
@@ -104,24 +95,6 @@
 //   );
 // }
 
-// async function saveTranscript(payload: {
-//   roomName: string;
-//   role: "doctor"|"patient";
-//   identity: string;
-//   text: string;
-//   timestamp: number;
-//   final: boolean;
-//   overlap: boolean;
-// }) {
-//   try {
-//     await axios.post(
-//       `${process.env.API_URL}/api/transcripts`,
-//       payload
-//     );
-//   } catch (err) {
-//     console.error("Failed to save transcript", err);
-//   }
-// }
 // export default function ConsultationPage() {
 //   const { id } = useParams<{ id: string }>();
 //   const router = useRouter();
@@ -130,6 +103,7 @@
 //   const callStartRef = useRef<number | null>(null);
 //   const listenersAttachedRef = useRef(false);
 //   const entryIdRef = useRef(0);
+//   const bottomRef = useRef<HTMLDivElement>(null);
 
 //   const [loading, setLoading] = useState(true);
 //   const [loadError, setLoadError] = useState<string | null>(null);
@@ -145,13 +119,7 @@
 //   const [hasJoined, setHasJoined] = useState(false);
 //   const [meetingEnded, setMeetingEnded] = useState(false);
 
-//   // Live remote participants built from the actual Room, shown once joined.
 //   const [liveParticipants, setLiveParticipants] = useState<CallParticipant[]>([]);
-
-//   // Real transcript entries fed by the AI agent over the LiveKit data channel —
-//   // replaces the demoData `transcript` array. Only final (not interim)
-//   // segments get pushed here, in arrival order, so the card renders the
-//   // natural doctor/patient/doctor... back-and-forth.
 //   const [transcriptEntries, setTranscriptEntries] = useState<TranscriptEntry[]>([]);
 
 //   const refreshParticipants = useCallback(() => {
@@ -165,34 +133,68 @@
 //     setLiveParticipants(remote);
 //   }, []);
 
-//   useEffect(() => {
-//     let cancelled = false;
-//     callStartRef.current = null;
 
-//     const load = async () => {
-//       try {
-//         const record = await fetchConsultationById(id);
-//         if (cancelled) return;
-//         setPatientName(record.patientName);
-//         setSlug(record.slug);
-//       } catch (err) {
-//         if (!cancelled) {
-//           setLoadError(err instanceof Error ? err.message : 'Failed to load consultation');
-//         }
-//       } finally {
-//         if (!cancelled) setLoading(false);
+
+//   const fetchTranscriptHistory = useCallback(async (roomName: string) => {
+//     if (!roomName) return;
+//     try {
+//       const { data } = await axios.get(
+//         `${process.env.NEXT_PUBLIC_API_URL}/transcripts/${roomName}`
+//       );
+//       type APITranscriptItem = {
+//         id: number | string;
+//         timestamp: string;
+//         role: 'doctor' | 'patient' | string;
+//         transcript: string;
+//       };
+//       const history: TranscriptEntry[] = (data as APITranscriptItem[]).map((item) => ({
+//         id: `h-${item.id}`,
+//         timestamp: formatClockTime(new Date(item.timestamp).getTime()),
+//         speaker: item.role === 'doctor' ? 'Doctor' : item.role === 'patient' ? 'Patient' : 'Unknown',
+//         speakerType: item.role === 'doctor' ? 'doctor' : 'patient',
+//         text: item.transcript,
+//       }));
+//       setTranscriptEntries(history);
+//     } catch (err) {
+//       console.error('Failed to load transcript history', err);
+//     }
+//   }, []);
+
+
+// useEffect(() => {
+//   let cancelled = false;
+//   callStartRef.current = null;
+
+//   const run = async () => {
+//     try {
+//       const record = await fetchConsultationById(id);
+//       if (cancelled) return;
+
+//       setPatientName(record.patientName);
+//       setSlug(record.slug);
+
+//       // Use record.slug directly — setSlug() above won't be reflected in
+//       // the `slug` state variable until the next render, so reading `slug`
+//       // here would still see the stale '' from this render's closure.
+//       await fetchTranscriptHistory(record.slug);
+//     } catch (err) {
+//       if (!cancelled) {
+//         setLoadError(err instanceof Error ? err.message : 'Failed to load consultation');
 //       }
-//     };
+//     } finally {
+//       if (!cancelled) setLoading(false);
+//     }
+//   };
 
-//     load();
+//   run();
 
-//     return () => {
-//       cancelled = true;
-//       roomRef.current?.disconnect();
-//       roomRef.current = null;
-//       listenersAttachedRef.current = false;
-//     };
-//   }, [id]);
+//   return () => {
+//     cancelled = true;
+//     roomRef.current?.disconnect();
+//     roomRef.current = null;
+//     listenersAttachedRef.current = false;
+//   };
+// }, [id, fetchTranscriptHistory]);
 
 //   const joinCall = async () => {
 //     setJoinError(null);
@@ -233,22 +235,34 @@
 //           try {
 //             parsed = JSON.parse(new TextDecoder().decode(payload));
 //           } catch {
-//             return; // not valid JSON — ignore
+//             return;
 //           }
 
-//           if (!isTranscriptMessage(parsed) || !parsed.final) return; // only persist finals
+//           if (!isTranscriptMessage(parsed) || !parsed.final) return;
 
-//           setTranscriptEntries((prev) => [
-//             ...prev,
-//             {
-//               id: `t-${entryIdRef.current++}`,
-//               timestamp: formatClockTime(parsed.timestamp),
-//               speaker:
-//                 parsed.role === 'doctor' ? 'Doctor' : parsed.role === 'patient' ? 'Patient' : 'Unknown',
-//               speakerType: parsed.role === 'doctor' ? 'doctor' : 'patient',
-//               text: parsed.text,
-//             },
-//           ]);
+//           const message = parsed;
+
+//           setTranscriptEntries((prev) => {
+//             // Defensive dedup only — the agent should never send the same
+//             // final segment twice, but a redelivered/replayed data message
+//             // shouldn't show up twice in the UI if it ever does.
+//             const alreadyExists = prev.some(
+//               (entry) => entry.text === message.text && entry.timestamp === formatClockTime(message.timestamp)
+//             );
+//             if (alreadyExists) return prev;
+
+//             return [
+//               ...prev,
+//               {
+//                 id: `t-${entryIdRef.current++}`,
+//                 timestamp: formatClockTime(message.timestamp),
+//                 speaker:
+//                   message.role === 'doctor' ? 'Doctor' : message.role === 'patient' ? 'Patient' : 'Unknown',
+//                 speakerType: message.role === 'doctor' ? 'doctor' : 'patient',
+//                 text: message.text,
+//               },
+//             ];
+//           });
 //         });
 
 //         listenersAttachedRef.current = true;
@@ -277,6 +291,11 @@
 
 //     return () => clearInterval(tick);
 //   }, [isLive]);
+
+//   // Auto-scroll whenever the transcript grows, same pattern as any chat UI.
+//   useEffect(() => {
+//     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+//   }, [transcriptEntries]);
 
 //   const handleEndConsultation = useCallback(async () => {
 //     if (!slug || isEnding || meetingEnded) return;
@@ -347,6 +366,7 @@
 //         <div className="flex flex-col gap-4 lg:col-span-2">
 //           <VideoCallPanel participants={hasJoined ? liveParticipants : PLACEHOLDER_PARTICIPANTS} />
 //           <LiveTranscriptCard entries={transcriptEntries} />
+//           <div ref={bottomRef} />
 //         </div>
 //         <AIClinicalNoteCard note={soapNote} />
 //       </div>
@@ -395,7 +415,7 @@ import {
   getConsultationJoinToken,
   endConsultationMeeting,
 } from '@/lib/api/consultations';
-import type { Consultation, TranscriptEntry } from '@/types';
+import type { Consultation, TranscriptEntry, SoapNote } from '@/types';
 import type { CallParticipant } from '@/types/patient';
 import type { Participant, RemoteParticipant } from 'livekit-client';
 
@@ -408,7 +428,6 @@ const colorForIdentity = (identity: string) => {
 
 const toCallParticipant = (participant: Participant | RemoteParticipant): CallParticipant => {
   const videoPublication = Array.from(participant.videoTrackPublications.values())[0];
-
   return {
     id: participant.identity,
     displayName: participant.name || participant.identity,
@@ -439,6 +458,8 @@ const formatElapsed = (seconds: number) => {
 const formatClockTime = (ms: number) =>
   new Date(ms).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
+// ─── Transcript message shape ─────────────────────────────────────────────────
+
 type TranscriptRole = 'doctor' | 'patient' | 'unknown';
 
 interface TranscriptDataMessage {
@@ -462,6 +483,56 @@ function isTranscriptMessage(value: unknown): value is TranscriptDataMessage {
     (v.role === 'doctor' || v.role === 'patient' || v.role === 'unknown')
   );
 }
+
+// ─── SOAP update message shape ────────────────────────────────────────────────
+
+// Gemini returns plan as a plain string. The AIClinicalNoteCard expects
+// plan as string[]. We normalise at the boundary so neither component
+// needs to change.
+interface RawSoapFromWorker {
+  subjective: string;
+  objective: string;
+  assessment: string;
+  plan: string | string[]; // Gemini may return either
+}
+
+interface SoapUpdateMessage {
+  type: 'soap_update';
+  soap: RawSoapFromWorker;
+  timestamp: number;
+}
+
+function isSoapUpdate(value: unknown): value is SoapUpdateMessage {
+  if (typeof value !== 'object' || value === null) return false;
+  const v = value as Record<string, unknown>;
+  return (
+    v.type === 'soap_update' &&
+    typeof v.soap === 'object' &&
+    v.soap !== null
+  );
+}
+
+// Convert whatever Gemini returned for `plan` into the string[] the card expects.
+function normalisePlan(plan: string | string[]): string[] {
+  if (Array.isArray(plan)) return plan;
+  // Split on newlines or semicolons so "Take paracetamol; rest" → two bullets.
+  return plan
+    .split(/\n|;/)
+    .map((s) => s.replace(/^[-•*]\s*/, '').trim())
+    .filter(Boolean);
+}
+
+function toSoapNote(raw: RawSoapFromWorker): SoapNote {
+  return {
+    subjective: raw.subjective,
+    objective:  raw.objective,
+    assessment: raw.assessment,
+    plan:       normalisePlan(raw.plan),
+    status:     'draft',
+  };
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function ConsultationPage() {
   const { id } = useParams<{ id: string }>();
@@ -490,44 +561,16 @@ export default function ConsultationPage() {
   const [liveParticipants, setLiveParticipants] = useState<CallParticipant[]>([]);
   const [transcriptEntries, setTranscriptEntries] = useState<TranscriptEntry[]>([]);
 
+  // Live SOAP note — starts as demo data, gets replaced by the worker's
+  // AI-generated version the first time a soap_update arrives.
+  const [liveSoapNote, setLiveSoapNote] = useState<SoapNote>(soapNote);
+
   const refreshParticipants = useCallback(() => {
     const room = roomRef.current;
     if (!room) return;
-
-    const remote = Array.from(room.remoteParticipants.values()).map((p) =>
-      toCallParticipant(p)
-    );
-
+    const remote = Array.from(room.remoteParticipants.values()).map(toCallParticipant);
     setLiveParticipants(remote);
   }, []);
-
-  // Loads any transcript already recorded before this page was opened
-  // (e.g. rejoining a call in progress, or reviewing after the fact).
-  // // This is a read-only GET — writes belong on the agent, not here.
-  // const fetchTranscriptHistory = useCallback(async () => {
-  //   if (!id) return;
-  //   try {
-  //     const { data } = await axios.get(
-  //       `${process.env.NEXT_PUBLIC_API_URL}/transcripts/${id}`
-  //     );
-  //     type APITranscriptItem = {
-  //       id: number | string;
-  //       timestamp: string;
-  //       role: 'doctor' | 'patient' | string;
-  //       text: string;
-  //     };
-  //     const history: TranscriptEntry[] = (data as APITranscriptItem[]).map((item) => ({
-  //       id: `h-${item.id}`,
-  //       timestamp: formatClockTime(new Date(item.timestamp).getTime()),
-  //       speaker: item.role === 'doctor' ? 'Doctor' : item.role === 'patient' ? 'Patient' : 'Unknown',
-  //       speakerType: item.role === 'doctor' ? 'doctor' : 'patient',
-  //       text: item.text,
-  //     }));
-  //     setTranscriptEntries(history);
-  //   } catch (err) {
-  //     console.error('Failed to load transcript history', err);
-  //   }
-  // }, [id]);
 
   const fetchTranscriptHistory = useCallback(async (roomName: string) => {
     if (!roomName) return;
@@ -554,60 +597,56 @@ export default function ConsultationPage() {
     }
   }, []);
 
-  // Fires once `slug` actually resolves from fetchConsultationById — not
-  // tied to `id`, since `id` is the route param, `slug` is the LiveKit room
-  // name the backend actually keys transcripts by.
-  // useEffect(() => {
-  //   if (!slug) return;
-
-  //   // Call async fetch inside effect to avoid calling setState synchronously
-  //   let cancelled = false;
-  //   (async () => {
-  //     try {
-  //       await fetchTranscriptHistory(slug);
-  //     } catch (err) {
-  //       if (!cancelled) console.error('Failed to fetch transcript history', err);
-  //     }
-  //   })();
-
-  //   return () => {
-  //     cancelled = true;
-  //   };
-  // }, [slug, fetchTranscriptHistory]);
-useEffect(() => {
-  let cancelled = false;
-  callStartRef.current = null;
-
-  const run = async () => {
+  // Also fetch the latest saved SOAP note on load so the card isn't empty
+  // if the doctor rejoins a consultation mid-session.
+  const fetchSoapHistory = useCallback(async (roomName: string) => {
+    if (!roomName) return;
     try {
-      const record = await fetchConsultationById(id);
-      if (cancelled) return;
-
-      setPatientName(record.patientName);
-      setSlug(record.slug);
-
-      // Use record.slug directly — setSlug() above won't be reflected in
-      // the `slug` state variable until the next render, so reading `slug`
-      // here would still see the stale '' from this render's closure.
-      await fetchTranscriptHistory(record.slug);
-    } catch (err) {
-      if (!cancelled) {
-        setLoadError(err instanceof Error ? err.message : 'Failed to load consultation');
+      const { data } = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/soap/${roomName}`
+      );
+      if (data) {
+        setLiveSoapNote(toSoapNote(data as RawSoapFromWorker));
       }
-    } finally {
-      if (!cancelled) setLoading(false);
+    } catch {
+      // No SOAP note yet — that's fine, keep the demo data as placeholder.
     }
-  };
+  }, []);
 
-  run();
+  useEffect(() => {
+    let cancelled = false;
+    callStartRef.current = null;
 
-  return () => {
-    cancelled = true;
-    roomRef.current?.disconnect();
-    roomRef.current = null;
-    listenersAttachedRef.current = false;
-  };
-}, [id, fetchTranscriptHistory]);
+    const run = async () => {
+      try {
+        const record = await fetchConsultationById(id);
+        if (cancelled) return;
+
+        setPatientName(record.patientName);
+        setSlug(record.slug);
+
+        await Promise.all([
+          fetchTranscriptHistory(record.slug),
+          fetchSoapHistory(record.slug),
+        ]);
+      } catch (err) {
+        if (!cancelled) {
+          setLoadError(err instanceof Error ? err.message : 'Failed to load consultation');
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    run();
+
+    return () => {
+      cancelled = true;
+      roomRef.current?.disconnect();
+      roomRef.current = null;
+      listenersAttachedRef.current = false;
+    };
+  }, [id, fetchTranscriptHistory, fetchSoapHistory]);
 
   const joinCall = async () => {
     setJoinError(null);
@@ -643,7 +682,7 @@ useEffect(() => {
         room.on(RoomEvent.LocalTrackPublished, refreshParticipants);
         room.on(RoomEvent.LocalTrackUnpublished, refreshParticipants);
 
-        room.on(RoomEvent.DataReceived, (payload: Uint8Array) => {
+        room.on(RoomEvent.DataReceived, (payload: Uint8Array, _participant, _kind, topic) => {
           let parsed: unknown;
           try {
             parsed = JSON.parse(new TextDecoder().decode(payload));
@@ -651,31 +690,42 @@ useEffect(() => {
             return;
           }
 
-          if (!isTranscriptMessage(parsed) || !parsed.final) return;
+          // ── Transcript finals ──────────────────────────────────────────
+          if (topic === 'transcript' || topic === undefined) {
+            if (!isTranscriptMessage(parsed) || !parsed.final) return;
+            const message = parsed;
 
-          const message = parsed;
+            setTranscriptEntries((prev) => {
+              const alreadyExists = prev.some(
+                (e) =>
+                  e.text === message.text &&
+                  e.timestamp === formatClockTime(message.timestamp)
+              );
+              if (alreadyExists) return prev;
 
-          setTranscriptEntries((prev) => {
-            // Defensive dedup only — the agent should never send the same
-            // final segment twice, but a redelivered/replayed data message
-            // shouldn't show up twice in the UI if it ever does.
-            const alreadyExists = prev.some(
-              (entry) => entry.text === message.text && entry.timestamp === formatClockTime(message.timestamp)
-            );
-            if (alreadyExists) return prev;
+              return [
+                ...prev,
+                {
+                  id: `t-${entryIdRef.current++}`,
+                  timestamp: formatClockTime(message.timestamp),
+                  speaker:
+                    message.role === 'doctor'
+                      ? 'Doctor'
+                      : message.role === 'patient'
+                      ? 'Patient'
+                      : 'Unknown',
+                  speakerType: message.role === 'doctor' ? 'doctor' : 'patient',
+                  text: message.text,
+                },
+              ];
+            });
+          }
 
-            return [
-              ...prev,
-              {
-                id: `t-${entryIdRef.current++}`,
-                timestamp: formatClockTime(message.timestamp),
-                speaker:
-                  message.role === 'doctor' ? 'Doctor' : message.role === 'patient' ? 'Patient' : 'Unknown',
-                speakerType: message.role === 'doctor' ? 'doctor' : 'patient',
-                text: message.text,
-              },
-            ];
-          });
+          // ── SOAP updates from the worker ───────────────────────────────
+          if (topic === 'soap') {
+            if (!isSoapUpdate(parsed)) return;
+            setLiveSoapNote(toSoapNote(parsed.soap));
+          }
         });
 
         listenersAttachedRef.current = true;
@@ -697,22 +747,18 @@ useEffect(() => {
 
   useEffect(() => {
     if (!isLive || callStartRef.current === null) return;
-
     const tick = setInterval(() => {
       setElapsedSeconds(Math.floor((Date.now() - callStartRef.current!) / 1000));
     }, 1000);
-
     return () => clearInterval(tick);
   }, [isLive]);
 
-  // Auto-scroll whenever the transcript grows, same pattern as any chat UI.
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [transcriptEntries]);
 
   const handleEndConsultation = useCallback(async () => {
     if (!slug || isEnding || meetingEnded) return;
-
     setIsEnding(true);
     try {
       await endConsultationMeeting(slug);
@@ -731,7 +777,11 @@ useEffect(() => {
   }, [slug, isEnding, meetingEnded]);
 
   if (loading) {
-    return <div className="py-12 text-center text-sm text-gray-500">Loading consultation details…</div>;
+    return (
+      <div className="py-12 text-center text-sm text-gray-500">
+        Loading consultation details…
+      </div>
+    );
   }
 
   const consultation: Consultation = {
@@ -781,7 +831,9 @@ useEffect(() => {
           <LiveTranscriptCard entries={transcriptEntries} />
           <div ref={bottomRef} />
         </div>
-        <AIClinicalNoteCard note={soapNote} />
+
+        {/* Live AI-generated SOAP note — updates every 15 s via the worker */}
+        <AIClinicalNoteCard note={liveSoapNote} />
       </div>
 
       <div className="mb-4">

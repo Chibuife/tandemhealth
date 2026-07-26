@@ -21,7 +21,7 @@ export interface AudioStatusMetrics {
 }
 
 export interface SoapNote {
-  status: 'Draft' | 'Final';
+  status: 'draft' | 'final';
   subjective: string;
   objective: string;
   assessment: string;

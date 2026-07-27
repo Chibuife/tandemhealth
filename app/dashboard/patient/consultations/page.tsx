@@ -103,7 +103,7 @@ export default function PatientConsultationsPage() {
         ) : (
           <div className="overflow-x-auto">
             {consultations.map((record) => (
-              <ConsultationRow key={record.id} consultation={record} />
+              <ConsultationRow key={record.id} patient={true} consultation={record} />
             ))}
           </div>
         )}

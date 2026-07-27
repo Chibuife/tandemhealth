@@ -113,7 +113,7 @@ export default function PatientConsultationPage() {
       try {
         const record = await fetchConsultationById(id);
         if (cancelled) return;
-        setClinicianName(record.patientName ?? '');
+        setClinicianName(record.doctorName ?? '');
         setSlug(record.slug);
       } catch (err) {
         if (!cancelled) {

@@ -7,6 +7,7 @@ import { ConsultationRecord } from '@/types/consultations';
 
 interface ConsultationRowProps {
   consultation: ConsultationRecord;
+  patient?:boolean;
 }
 
 const statusClasses = {
@@ -19,7 +20,7 @@ const avatarTints: AvatarTint[] = [
   'blue', 'violet', 'amber', 'rose'
 ];
 
-export function ConsultationRow({ consultation }: ConsultationRowProps) {
+export function ConsultationRow({ consultation, patient }: ConsultationRowProps) {
   const router = useRouter()
   
 function getAvatarTint(initials: string): AvatarTint {
@@ -63,7 +64,7 @@ function getAvatarTint(initials: string): AvatarTint {
       <div className="flex shrink-0 items-center gap-2">
         {consultation.status === 'accepted' && (
           <button
-            onClick={() => router.push(`/dashboard/doctor/consultations/${consultation.id}`)}
+            onClick={() => patient? router.push(`/dashboard/patient/consultations/${consultation.id}`):router.push(`/dashboard/doctor/consultations/${consultation.id}`)}
             type="button"
             className="flex items-center gap-2 whitespace-nowrap rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-emerald-700"
           >

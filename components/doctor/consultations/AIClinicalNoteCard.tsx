@@ -1,12 +1,14 @@
 'use client';
 
-import { ChevronDown, RefreshCw } from 'lucide-react';
+import { ChevronDown, RefreshCw, Sparkles } from 'lucide-react';
 import { Card } from '../../Card';
 import { Badge } from '../../Badge';
 import { SoapNote } from '@/types';
 
 interface Props {
   note: SoapNote;
+  onGenerate: () => Promise<void>;
+  isGenerating?: boolean;
 }
 
 const SECTIONS: { key: 'subjective' | 'objective' | 'assessment'; letter: string; label: string }[] = [
@@ -23,9 +25,36 @@ function SectionLetter({ letter }: { letter: string }) {
   );
 }
 
-export function AIClinicalNoteCard({ note }: Props) {
+// Placeholder shown before first generation
+function EmptyState({ onGenerate, isGenerating }: { onGenerate: () => void; isGenerating: boolean }) {
+  return (
+    <div className="flex flex-col items-center justify-center py-10 text-center">
+      <Sparkles size={28} className="mb-3 text-chip-purpleText opacity-60" />
+      <p className="mb-1 text-[13px] font-semibold text-ink">No SOAP note yet</p>
+      <p className="mb-4 text-[12px] leading-relaxed text-muted">
+        Click Generate to create an AI clinical note from the transcript.
+      </p>
+      <button
+        onClick={onGenerate}
+        disabled={isGenerating}
+        className="flex items-center justify-center rounded-full bg-ink px-5 py-2.5 transition hover:bg-black disabled:opacity-50"
+      >
+        <Sparkles size={13} className={`mr-1.5 text-surface ${isGenerating ? 'animate-pulse' : ''}`} />
+        <span className="text-xs font-bold text-surface">
+          {isGenerating ? 'Generating…' : 'Generate SOAP'}
+        </span>
+      </button>
+    </div>
+  );
+}
+
+const isEmpty = (note: SoapNote) =>
+  !note.subjective && !note.objective && !note.assessment && note.plan.length === 0;
+
+export function AIClinicalNoteCard({ note, onGenerate, isGenerating = false }: Props) {
   return (
     <Card>
+      {/* Header */}
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <h2 className="text-[15px] font-bold text-ink">AI clinical note</h2>
@@ -37,41 +66,70 @@ export function AIClinicalNoteCard({ note }: Props) {
         </button>
       </div>
 
-      {SECTIONS.map((section) => (
-        <div key={section.key} className="mb-4 flex">
-          <SectionLetter letter={section.letter} />
-          <div>
-            <p className="mb-1 text-[13px] font-bold text-ink">{section.label}</p>
-            <p className="text-[13px] leading-relaxed text-muted">{note[section.key]}</p>
+      {/* Body — empty state or note content */}
+      {isEmpty(note) ? (
+        <EmptyState onGenerate={onGenerate} isGenerating={isGenerating} />
+      ) : (
+        <>
+          {SECTIONS.map((section) => (
+            <div key={section.key} className="mb-4 flex">
+              <SectionLetter letter={section.letter} />
+              <div>
+                <p className="mb-1 text-[13px] font-bold text-ink">{section.label}</p>
+                <p className="text-[13px] leading-relaxed text-muted">{note[section.key]}</p>
+              </div>
+            </div>
+          ))}
+
+          <div className="mb-4 flex">
+            <SectionLetter letter="P" />
+            <div>
+              <p className="mb-1 text-[13px] font-bold text-ink">Plan</p>
+              <ul>
+                {note.plan.map((line, i) => (
+                  <li key={i} className="flex text-[13px] leading-relaxed text-muted">
+                    <span className="mr-1.5">&bull;</span>
+                    <span>{line}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           </div>
-        </div>
-      ))}
 
-      <div className="mb-4 flex">
-        <SectionLetter letter="P" />
-        <div>
-          <p className="mb-1 text-[13px] font-bold text-ink">Plan</p>
-          <ul>
-            {note.plan.map((line, i) => (
-              <li key={i} className="flex text-[13px] leading-relaxed text-muted">
-                <span className="mr-1.5">&bull;</span>
-                <span>{line}</span>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </div>
+          {/* Actions */}
+          <div className="flex gap-2 pt-1">
+            {/* Regenerate — only shown when status is draft */}
+            {note.status === 'draft' && (
+              <button
+                onClick={onGenerate}
+                disabled={isGenerating}
+                className="flex items-center justify-center rounded-full border border-border px-4 py-2.5 disabled:opacity-50"
+              >
+                <RefreshCw
+                  size={13}
+                  className={`mr-1.5 text-ink ${isGenerating ? 'animate-spin' : ''}`}
+                />
+                <span className="text-xs font-semibold text-ink">
+                  {isGenerating ? 'Regenerating…' : 'Regenerate'}
+                </span>
+              </button>
+            )}
 
-      <div className="flex gap-2 pt-1">
-        <button className="flex items-center justify-center rounded-full border border-border px-4 py-2.5">
-          <RefreshCw size={13} className="mr-1.5 text-ink" />
-          <span className="text-xs font-semibold text-ink">Regenerate</span>
-        </button>
-        <button className="flex flex-1 items-center justify-center rounded-full bg-ink py-2.5 transition hover:bg-black">
-          <span className="text-xs font-bold text-surface">Transfer to patient record</span>
-          <ChevronDown size={14} className="ml-1.5 text-surface" />
-        </button>
-      </div>
+            {/* Transfer to patient record — always visible */}
+            <button
+              disabled={note.status === 'final'}
+              className="flex flex-1 items-center justify-center rounded-full bg-ink py-2.5 transition hover:bg-black disabled:opacity-50"
+            >
+              <span className="text-xs font-bold text-surface">
+                {note.status === 'final' ? 'Transferred ✓' : 'Transfer to patient record'}
+              </span>
+              {note.status !== 'final' && (
+                <ChevronDown size={14} className="ml-1.5 text-surface" />
+              )}
+            </button>
+          </div>
+        </>
+      )}
     </Card>
   );
 }

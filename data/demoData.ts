@@ -51,7 +51,7 @@ export const audioStatus: AudioStatusMetrics = {
 };
 
 export const soapNote: SoapNote = {
-  status: 'Draft',
+  status: 'draft',
   subjective:
     'Patient reports almost daily headaches, worse in the morning. Sometimes accompanied by nausea.',
   objective: 'Patient is alert and oriented. No neurological deficits observed.',

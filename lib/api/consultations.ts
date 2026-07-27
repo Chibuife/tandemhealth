@@ -23,21 +23,19 @@ const authFetch = async (path: string, options: RequestInit = {}) => {
   return res.json();
 };
 
-// Backend meeting shape (already camelCased by the API).
 interface BackendMeeting {
   id: string;
   slug: string;
-  title: string;
-  hostId: string;
-  participantId: string | null;
+  patientId: string;       // ✅ was participantId
+  patientName?: string;
+  doctorId: string;        // ✅ added
+  doctorName?: string;     // ✅ added
   scheduledStart: string;
   scheduledEnd: string;
-  status: "pending" | "accepted" | "declined" | "live" | "ended" | "cancelled";
-  reasonForVisit: string | null;
-  priority: "low" | "medium" | "high";
+  reasonForVisit?: string;
   consultationType: string;
-  patientName: string | null;
-  patientEmail: string | null;
+  priority?: string;
+  status: string;
 }
 
 const INCOMING_WINDOW_MINUTES = 10;
@@ -114,13 +112,17 @@ const toPatientInitials = (name: string): string =>
 
 const mapToConsultationRecord = (m: BackendMeeting): ConsultationRecord => {
   const patientName = m.patientName ?? 'Unknown patient';
+  const doctorName = m.doctorName ?? 'Unknown doctor';  // ✅ add this
 
   return {
     id: m.id,
     slug: m.slug,
-    patientId: m.participantId ?? '',
+    patientId: m.patientId ?? '',        // ✅ was m.participantId
     patientName,
     patientInitials: toPatientInitials(patientName),
+    doctorId: m.doctorId ?? '',          // ✅ added
+    doctorName,                          // ✅ added
+    doctorInitials: toPatientInitials(doctorName), // ✅ added (reuse same initials helper)
     scheduledStart: m.scheduledStart,
     scheduledEnd: m.scheduledEnd,
     durationMinutes: Math.round(
@@ -131,9 +133,6 @@ const mapToConsultationRecord = (m: BackendMeeting): ConsultationRecord => {
     priority: toDisplayPriority(m.priority),
     status: toDisplayStatus(m.status),
     isIncoming: computeIsIncoming(m.status, m.scheduledStart, m.scheduledEnd),
-    // patientInitials is derived here from patientName since there's no
-    // dedicated initials column; age/gender still aren't in the users
-    // table, so those fields remain absent from ConsultationRecord.
   };
 };
 export const fetchConsultations = async (): Promise<ConsultationRecord[]> => {

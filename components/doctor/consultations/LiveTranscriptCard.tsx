@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useRef } from 'react';
 import clsx from 'clsx';
 import { Card } from '../../Card';
 import { Badge } from '../../Badge';
@@ -28,8 +29,18 @@ function TranscriptRow({ entry }: { entry: TranscriptEntry }) {
 }
 
 export function LiveTranscriptCard({ entries }: Props) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom whenever a new entry arrives
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [entries]);
+
   return (
     <div className="flex flex-col gap-4">
+      {/* Recording status card */}
       <Card>
         <Badge label="Live" variant="live" dot className="mb-3" />
         <AudioWaveform />
@@ -39,17 +50,31 @@ export function LiveTranscriptCard({ entries }: Props) {
         </div>
       </Card>
 
-      <Card>
+      {/* Transcript card — fixed height, scrolls internally */}
+      <Card className="flex flex-col">
         <div className="mb-3 flex items-center gap-2">
           <h2 className="text-[15px] font-bold text-ink">Live transcript</h2>
           <Badge label="Live" variant="live" dot />
         </div>
 
-        {entries.map((entry) => (
-          <TranscriptRow key={entry.id} entry={entry} />
-        ))}
+        {/* Scrollable transcript body */}
+        <div
+          ref={scrollRef}
+          className="h-72 overflow-y-auto pr-1"
+        >
+          {entries.length === 0 ? (
+            <p className="text-[13px] text-faint">
+              Transcript will appear here as participants speak…
+            </p>
+          ) : (
+            entries.map((entry) => (
+              <TranscriptRow key={entry.id} entry={entry} />
+            ))
+          )}
+        </div>
 
-        <div className="mt-1 flex items-center">
+        {/* Transcribing indicator — always pinned below the scroll area */}
+        <div className="mt-3 flex items-center border-t border-divider pt-2">
           <span className="mr-3 text-xs text-faint">Transcribing...</span>
           <div className="flex flex-1 flex-wrap gap-[5px]">
             {Array.from({ length: 15 }).map((_, i) => (

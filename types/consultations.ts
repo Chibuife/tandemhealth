@@ -8,18 +8,21 @@ export type ConsultationPriority = "low" | "medium" | "high";
 
 export interface ConsultationRecord {
   id: string;
-  patientId: string;
+  patientId: string;        // ✅ was participantId/hostId — now patientId
+  doctorId: string;         // ✅ was doctorsId — now doctorId
   patientName: string;
   patientInitials: string;
-  scheduledStart: string; // ISO string
-  scheduledEnd: string; // ISO string
+  doctorName: string;       // ✅ added — useful for patient-side view
+  doctorInitials: string;   // ✅ added — useful for patient-side view
+  scheduledStart: string;   // ISO string
+  scheduledEnd: string;     // ISO string
   durationMinutes: number;
   reasonForVisit: string;
   consultationType: string;
   priority: ConsultationPriority;
   status: ConsultationStatus;
-  isIncoming: boolean; // true when accepted and <10min from scheduledStart
-  slug: string; // used to build the join/token request
+  isIncoming: boolean;      // true when accepted and <10min from scheduledStart
+  slug: string;             // used to build the join/token request
 }
 
 export interface ConsultationSummary {

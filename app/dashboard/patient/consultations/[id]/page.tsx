@@ -112,6 +112,7 @@ export default function PatientConsultationPage() {
     const load = async () => {
       try {
         const record = await fetchConsultationById(id);
+        console.log(record,"record")
         if (cancelled) return;
         setClinicianName(record.doctorName ?? '');
         setSlug(record.slug);

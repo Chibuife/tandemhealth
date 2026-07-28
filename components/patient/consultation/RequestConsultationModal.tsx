@@ -19,7 +19,6 @@ export function RequestConsultationModal({ doctor, onClose, onSubmit }: RequestC
   const [priority, setPriority] = useState<"low" | "medium" | "high">("medium");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const handleSubmit = async () => {
     if (!date || !startTime || !endTime) {
       setError("Please choose a date, start time, and end time.");
@@ -37,6 +36,8 @@ export function RequestConsultationModal({ doctor, onClose, onSubmit }: RequestC
     setSubmitting(true);
     setError(null);
     try {
+      console.log(doctor.id,"doc")
+
       await onSubmit({
         doctorId: doctor.id,
         scheduledStart: start.toISOString(),

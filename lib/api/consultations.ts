@@ -26,10 +26,10 @@ const authFetch = async (path: string, options: RequestInit = {}) => {
 interface BackendMeeting {
   id: string;
   slug: string;
-  patientId: string;       // ✅ was participantId
+  patientId: string;     
   patientName?: string;
-  doctorId: string;        // ✅ added
-  doctorName?: string;     // ✅ added
+  doctorId: string;
+  doctorName?: string;
   scheduledStart: string;
   scheduledEnd: string;
   reasonForVisit?: string;
@@ -177,7 +177,7 @@ export async function requestConsultation(input: RequestConsultationInput) {
     method: "POST",
     body: JSON.stringify({
       title: "Doctor Consultation",
-      participantId: input.doctorId,
+      doctorId: input.doctorId,
       scheduledStart: input.scheduledStart,
       scheduledEnd: input.scheduledEnd,
       reasonForVisit: input.reasonForVisit,

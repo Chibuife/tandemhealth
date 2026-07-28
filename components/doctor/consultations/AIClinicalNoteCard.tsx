@@ -4,7 +4,7 @@ import { ChevronDown, RefreshCw, Sparkles, Pencil, Check, X, Send } from 'lucide
 import { Card } from '../../Card';
 import { Badge } from '../../Badge';
 import { SoapNote } from '@/types';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface Props {
   note: SoapNote;
@@ -175,9 +175,7 @@ function PublishButton({
     return (
       <div className="flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2.5">
         <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-        <span className="text-xs font-semibold text-emerald-700">
-          Visible to patient
-        </span>
+        <span className="text-xs font-semibold text-emerald-700">Visible to patient</span>
       </div>
     );
   }
@@ -197,19 +195,12 @@ function PublishButton({
 // ─── Main card ────────────────────────────────────────────────────────────────
 
 export function AIClinicalNoteCard({ note, onGenerate, onSave, onPublish, isGenerating = false }: Props) {
-  const [isEditing,   setIsEditing]   = useState(false);
-  const [isSaving,    setIsSaving]    = useState(false);
+  const [isEditing,    setIsEditing]    = useState(false);
+  const [isSaving,     setIsSaving]     = useState(false);
   const [isPublishing, setIsPublishing] = useState(false);
-  const [published,   setPublished]   = useState(false);
-  const [draft,       setDraft]       = useState<SoapNote>(note);
+  const [published,    setPublished]    = useState(false);
+  const [draft,        setDraft]        = useState<SoapNote>(note);
 
-  // Keep draft in sync when a new AI-generated note arrives
-  const prevNoteRef = useState(() => note)[0];
-  if (note !== prevNoteRef && !isEditing) {
-    setDraft(note);
-    // New generation resets published state — doctor must re-publish
-    setPublished(false);
-  }
 
   const handleEdit = () => {
     setDraft(note);
@@ -227,8 +218,7 @@ export function AIClinicalNoteCard({ note, onGenerate, onSave, onPublish, isGene
     try {
       await onSave(draft);
       setIsEditing(false);
-      // Edits invalidate the published state — doctor should re-publish
-      setPublished(false);
+      setPublished(false); // edits invalidate published state
     } catch (err) {
       console.error('Failed to save SOAP note', err);
     } finally {
@@ -329,8 +319,6 @@ export function AIClinicalNoteCard({ note, onGenerate, onSave, onPublish, isGene
           {/* ── Actions (only when not editing) ── */}
           {!isEditing && (
             <div className="flex flex-col gap-2 pt-1">
-
-              {/* Top row: Regenerate + Publish */}
               <div className="flex gap-2">
                 {note.status === 'draft' && (
                   <button
@@ -348,7 +336,6 @@ export function AIClinicalNoteCard({ note, onGenerate, onSave, onPublish, isGene
                   </button>
                 )}
 
-                {/* ✅ Publish to patient */}
                 <PublishButton
                   published={published}
                   isPublishing={isPublishing}
@@ -356,7 +343,6 @@ export function AIClinicalNoteCard({ note, onGenerate, onSave, onPublish, isGene
                 />
               </div>
 
-              {/* Bottom row: Transfer to patient record */}
               <button
                 disabled={note.status === 'final'}
                 className="flex w-full items-center justify-center rounded-full bg-ink py-2.5 transition hover:bg-black disabled:opacity-50"
